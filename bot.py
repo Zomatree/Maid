@@ -1,52 +1,16 @@
-import discord
-from discord.ext import commands, flags
-import asyncpg
-import databaseutils
-import typing
 import asyncio
+import discord
+from utils import database, embed
+from discord.ext import commands, flags
+import typing
 import datetime
 import re
 import random
-
-converters = [converter().convert for name, converter in vars(commands).items() if name.endswith("Converter")][1:-1].append(int)
-
-
-class Embed(discord.Embed):
-    def __init__(self, bot, message: typing.Union[commands.Context, discord.Message] = None, **kwargs):
-        super().__init__(**kwargs)
-        asyncio.create_task(self.__ainit__(bot, message, **kwargs))
-
-    async def __ainit__(self, bot, message, **kwargs):
-        if isinstance(message, commands.Context):
-            message = message.message
-        title = kwargs.get("title")
-        if title:
-            kwargs.pop("title")
-
-        if message and message.guild:
-            row = await bot.db.get("guild_colours", ["colour"], {"guildid": message.guild.id})
-        else:
-            row = None
-
-        colour = row[0][0] if row else 0x000000
-        kwargs["colour"] = kwargs.get("colour", colour)
-
-        if title:
-            avatar_url = message.author.avatar_url_as(format="png") if message else None
-            self.set_author(name=title, icon_url=avatar_url)
-
-        icon_url = bot.user.avatar_url_as(format="png")
-
-        if message:
-            self.set_footer(text=message.clean_content, icon_url=icon_url)
-        else:
-            self.set_footer(icon_url=icon_url)
-
-        self.timestamp = datetime.datetime.utcnow()
+import config
 
 
 class Bot(commands.Bot):
-    session = databaseutils.DatabaseHandler(user="postgres", database="custom-commands", host="localhost", password="angelo2005")
+    session = database.DatabaseHandler(**config.database_config)
     cache = {}
     regex = r"\{\{([^{}]+)\}\}"
     group_regex = r"\$([1-9][0-9]*)"
@@ -75,13 +39,6 @@ class Bot(commands.Bot):
             self.add_command(flag)
             return flag
         return inner
-
-    async def convert_arg(self, ctx, arg):
-        for converter in converters:
-            try:
-                return await converter(ctx, arg)
-            except commands.CommandError:
-                continue
 
     async def format_message(self, ctx, args, format):
         format = list(format)
@@ -151,4 +108,4 @@ async def create(ctx, name, **options):
         await _ctx.send(await bot.format_message(_ctx, args, bot.cache[_ctx.command.name][_ctx.guild.id][0]))
 
 
-bot.run("NTAwNDE0NTYwMDk3MDA5Njc1.Xla20w.8t7gG5_4i4r-bshPixaFOJkWD_I")
+bot.run(config.TOKEN)
