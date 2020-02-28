@@ -1,6 +1,6 @@
 import asyncio
 import discord
-from utils import database, embed
+import utils
 from discord.ext import commands, flags
 import typing
 import datetime
@@ -10,7 +10,7 @@ import config
 
 
 class Bot(commands.Bot):
-    session = database.DatabaseHandler(**config.database_config)
+    session = utils.database.DatabaseHandler(**config.database_config)
     cache = {}
     regex = r"\{\{([^{}]+)\}\}"
     group_regex = r"\$([1-9][0-9]*)"
@@ -50,6 +50,7 @@ class Bot(commands.Bot):
             if (arg):
                 try:
                     format[start:end] = args[int(arg.group(1))-1]
+                    print("".join(format))
                 except IndexError:
                     pass
             i = 0
@@ -69,6 +70,7 @@ class Bot(commands.Bot):
                     allowed_match = re.match(k, match.group(0))
                     if (allowed_match):
                         format[match.start():match.end()] = v(ctx, allowed_match)
+                        print("".join(format))
             return "".join(format)
 
 
@@ -98,7 +100,7 @@ async def create(ctx, name, **options):
     options["return"] = " ".join(options["return"])
     rows = await bot.session.get("commands", [], {"guildid": ctx.guild.id, "name": name})
     if rows:
-        return await ctx.send(Embed(bot, ctx, description="A command already exists with that name"))
+        return await ctx.send(utils.Embed(bot, ctx, description="A command already exists with that name"))
 
     await bot.add_custom_command(ctx.guild.id, name, options["return"], options["args"])
 
