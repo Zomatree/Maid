@@ -32,6 +32,7 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         self.load_extension("jishaku")
+        self.load_extension("maid.custom")
         rows = await self.session.get("commands", [], {})
         for row in rows:
             if row[1] not in self.cache:

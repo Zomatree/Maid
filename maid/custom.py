@@ -1,6 +1,6 @@
 from discord.ext import commands, flags
 import discord
-from .. import utils
+from . import utils
 
 def setup(bot):
 
