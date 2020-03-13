@@ -3,6 +3,7 @@ import typing
 from discord.ext import commands
 import asyncio
 import datetime
+import random
 
 
 class Embed(discord.Embed):
@@ -11,6 +12,7 @@ class Embed(discord.Embed):
         asyncio.create_task(self.__ainit__(bot, message, **kwargs))
 
     async def __ainit__(self, bot, message, **kwargs):
+        self._colour = discord.Colour.from_hsv(random.random(), 1, 1)
         if isinstance(message, commands.Context):
             message = message.message
         title = kwargs.get("title")
@@ -22,10 +24,6 @@ class Embed(discord.Embed):
             self.set_author(name=title, icon_url=avatar_url)
 
         icon_url = bot.user.avatar_url_as(format="png")
+        self.set_footer(icon_url=icon_url)
 
-        if message:
-            self.set_footer(text=message.clean_content, icon_url=icon_url)
-        else:
-            self.set_footer(icon_url=icon_url)
-
-        self.timestamp = datetime.datetime.utcnow()
+        self._timestamp = datetime.datetime.utcnow()

@@ -1,12 +1,12 @@
 import asyncio
 import discord
-from . import utils, config
+from maid import utils, config
 from discord.ext import commands, flags
 import re
 import random
 from inspect import isawaitable
 
-class CustomCommands(commands.Cog, name="Custom commands"):
+class CustomCommands(commands.Cog, name="custom commands"):
     pass
 
 
@@ -18,30 +18,29 @@ class Bot(commands.Bot):
     async def on_ready(self):
         if not self.ran:
             self.load_extension("jishaku")
-            self.load_extension("maid.custom")
             self.add_cog(CustomCommands())
             rows = await self.session.get("commands", [], {})
             for row in rows:
                 if row[1] not in self.cache:
                     self.cache[row[1]] = {}
                 self.cache[row[1]][row[0]] = [row[2], row[3]]
-                self.create_custom_command(row[1])
+                self.create_custom_command(row[1], row[4])
             print("Ready!")
         self.ran = True
 
-    def create_custom_command(self, name):
+    def create_custom_command(self, name, desc):
         if not self.get_command(name):
-            @self.command(name=name)
+            @self.command(name=name, help=desc)
             @commands.check(lambda _ctx:  _ctx.guild.id in _ctx.bot.cache[_ctx.command.name])
             async def _command(_self, _ctx, *args):
                 await _ctx.send(await self.format_message(_ctx, "".join(args), self.cache[_ctx.command.name][_ctx.guild.id][0]))
-            _command.cog = self.get_cog("Custom commands")
+            _command.cog = self.get_cog("custom commands")
 
-    async def add_custom_command(self, guildid, name, returnstr, args):
-        await self.session.insert("commands", [guildid, name, returnstr, args])
+    async def add_custom_command(self, guildid, name, returnstr, args, desc):
+        await self.session.insert("commands", [guildid, name, returnstr, args, desc])
         if name not in self.cache:
             self.cache[name] = {}
-        self.cache[name][guildid] = [returnstr, args]
+        self.cache[name][guildid] = [returnstr, args, desc]
 
     def flagcommand(self, *args, **kwargs):
         def inner(command):
