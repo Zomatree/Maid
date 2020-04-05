@@ -1,0 +1,33 @@
+- database:
+{
+    commands:
+    {
+        guildid: bigint
+        name: string
+        return: string # the string format for what the command will return
+        args: int
+        description: string # this will show in the help command
+        aliases: string[]
+    }
+    stats:
+    {
+        command: string
+        authorid: bigint
+        guildid: bigint
+    }
+}
+
+
+- cache: 
+{
+    name: 
+    {
+        guildid:
+        [
+            return,
+            args,
+            desc,
+            aliases
+        ]
+    }
+}

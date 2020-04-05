@@ -34,7 +34,6 @@ class HelpCommand(commands.HelpCommand):
         embed = utils.Embed(self.context.bot, self.context, description=command.help, title=f"{command.name} {command.signature}")
         embed.set_footer(icon_url=str(self.context.bot.user.avatar_url_as(format="png")))
         await self.context.send(embed = embed)
-        
 
 
 def setup(bot):

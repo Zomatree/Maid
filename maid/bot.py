@@ -9,6 +9,7 @@ from inspect import isawaitable
 class CustomCommands(commands.Cog, name="custom commands"):
     pass
 
+custom_commands = CustomCommands()
 
 class Bot(commands.Bot):
     session = utils.database.DatabaseHandler(**config.database_config)
@@ -18,29 +19,35 @@ class Bot(commands.Bot):
     async def on_ready(self):
         if not self.ran:
             self.load_extension("jishaku")
-            self.add_cog(CustomCommands())
+            self.add_cog(custom_commands)
             rows = await self.session.get("commands", [], {})
             for row in rows:
                 if row[1] not in self.cache:
                     self.cache[row[1]] = {}
-                self.cache[row[1]][row[0]] = [row[2], row[3]]
-                self.create_custom_command(row[1], row[4])
+                self.cache[row[1]][row[0]] = [row[2], row[3], row[4], row[5]]
+                self.create_custom_command(row[1], row[4], row[5])
             print("Ready!")
         self.ran = True
 
-    def create_custom_command(self, name, desc):
+    def create_custom_command(self, name, desc, aliases):
         if not self.get_command(name):
             @self.command(name=name, help=desc)
+            @commands.check(lambda _ctx: _ctx.invoked_with in [_ctx.command.name] + self.cache[_ctx.command.name][_ctx.guild.id][3])
             @commands.check(lambda _ctx:  _ctx.guild.id in _ctx.bot.cache[_ctx.command.name])
-            async def _command(_self, _ctx, *args):
-                await _ctx.send(await self.format_message(_ctx, "".join(args), self.cache[_ctx.command.name][_ctx.guild.id][0]))
-            _command.cog = self.get_cog("custom commands")
+            async def _command(_self, _ctx):
+                await _ctx.send(await self.format_message(_ctx, "", self.cache[_ctx.command.name][_ctx.guild.id][0]))
+            _command.cog = custom_commands  # TODO: find out why they dont actually appear inside the cog
+            custom_commands.__cog_commands__ += (_command,)
 
-    async def add_custom_command(self, guildid, name, returnstr, args, desc):
-        await self.session.insert("commands", [guildid, name, returnstr, args, desc])
+        for alias in aliases:
+            if alias not in self.all_commands:
+                self.all_commands[alias] = self.all_commands[name]
+
+    async def add_custom_command(self, guildid, name, returnstr, args, desc, aliases):
+        await self.session.insert("commands", [guildid, name, returnstr, args, desc, aliases])
         if name not in self.cache:
             self.cache[name] = {}
-        self.cache[name][guildid] = [returnstr, args, desc]
+        self.cache[name][guildid] = [returnstr, args, desc, aliases]
 
     def flagcommand(self, *args, **kwargs):
         def inner(command):
@@ -89,3 +96,9 @@ class Bot(commands.Bot):
                 strformat[match.start():match.end()] = strformat[match.start(1):match.end(1)]
 
         return "".join(strformat)
+
+    async def on_command(self, ctx):
+        print(ctx.command)
+        print(self.cache.keys())
+        if ctx.command.name in self.cache.keys():
+            await self.session.insert("stats", [ctx.command.name, ctx.author.id, ctx.guild.id])
